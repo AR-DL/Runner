@@ -30,6 +30,13 @@ env:
 
 jobs:
   build:
+    strategy:
+      matrix:
+        build-config:
+        - foo: 'bar'
+          if: ${{github.event.inputs.build-api == 'true' }}
+        - foo: 'baz'
+          if: ${{github.event.inputs.build-api == 'true' }}
     name: Build
     runs-on: ubuntu-latest
 
@@ -76,8 +83,16 @@ jobs:
         cd ../management_core
         mvn clean install
 
-    - name: Build
+    - name: Package api
+      if: ${{github.event.inputs.build-api == 'true' }}
       working-directory: source
       run: |
         cd ../management_api/api_service
         mvn package
+
+#    - name: Docker Build and push
+#      if: ${{github.event.inputs.build-api == 'true' }}
+#      working-directory: source
+#      run: |
+#        cd ../management_api/api_service
+#        mvn package
