@@ -35,12 +35,16 @@ jobs:
         build-config:
         - build-api: 'api-service'
           if: ${{github.event.inputs.build-api == 'true' }}
+          path: "prova"
         - build-event: 'event-service'
           if: ${{github.event.inputs.build-event == 'true' }}
+          path: "prova"
         - build-user: 'user-service'
           if: ${{github.event.inputs.build-user == 'true' }}
+          path: "prova"
         - build-inventory: 'inventory-service'
           if: ${{github.event.inputs.build-inventory == 'true' }}
+          path: "prova"
     name: Build
     runs-on: ubuntu-latest
 
@@ -87,18 +91,18 @@ jobs:
         cd ../management_core
         mvn clean install
 
-    - name: Build core
+    - name: Package
       working-directory: source
       run: |
-        cd ../management_core
-        mvn clean install
+        cd ${{ matrix.path }}
+        mvn package
 
-    - name: Package api
+    - name: Docker Build && Push
       if: ${{ matrix.build-config.build-api }}
       working-directory: source
       run: |
         cd ../management_api/api_service
-        mvn package
+        docker build -t giridhar96/mng_api:${{github.run_number}} . --platform=linux/arm64 --no-cache
 
 #    - name: Docker Build and push
 #      if: ${{github.event.inputs.build-api == 'true' }}
