@@ -35,16 +35,16 @@ jobs:
         build-config:
         - build-api: 'api-service'
           if: ${{github.event.inputs.build-api == 'true' }}
-          path: "prova"
+          path: "prova1"
         - build-event: 'event-service'
           if: ${{github.event.inputs.build-event == 'true' }}
-          path: "prova"
+          path: "prova2"
         - build-user: 'user-service'
           if: ${{github.event.inputs.build-user == 'true' }}
-          path: "prova"
+          path: "prova3"
         - build-inventory: 'inventory-service'
           if: ${{github.event.inputs.build-inventory == 'true' }}
-          path: "prova"
+          path: "prova4"
     name: Build
     runs-on: ubuntu-latest
 
@@ -94,7 +94,7 @@ jobs:
     - name: Package
       working-directory: source
       run: |
-        cd ${{ matrix.path }}
+        cd ${{ matrix.build-config.path }}
         mvn package
 
     - name: Docker Build && Push
