@@ -82,6 +82,7 @@ jobs:
         git clone git@github.com:AR-DL/management_core.git
         cd management_core
         git checkout ${{ env.BRANCH_NAME }}
+        echo "BUILD_NUMBER=$(git rev-list --count HEAD)" >> $GITHUB_ENV
         cd ../source
 
     - name: Cloning Management Api and switching to ${{ env.BRANCH_NAME }}
@@ -112,7 +113,7 @@ jobs:
       working-directory: source
       run: |
         cd ${{ matrix.build-config.path }}
-        docker build -t giridhar96/${{ matrix.build-config.docker_repo_name }}:${{github.run_number}} . --platform=linux/arm64 --no-cache
+        docker build -t giridhar96/${{ matrix.build-config.docker_repo_name }}:${{env.BUILD_NUMBER}} . --platform=linux/arm64 --no-cache
 
 #    - name: Docker Build and push
 #      if: ${{github.event.inputs.build-api == 'true' }}
