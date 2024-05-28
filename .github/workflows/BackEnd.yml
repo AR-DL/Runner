@@ -61,6 +61,12 @@ jobs:
         submodules: recursive
         fetch-depth: 0
 
+    - name: Where i am
+      if: ${{ matrix.build-config.if }}
+      run: |
+        pwd
+        ls
+
     - name: Set up Maven Central Repository
       if: ${{ matrix.build-config.if }}
       uses: actions/setup-java@v4
