@@ -35,21 +35,26 @@ jobs:
         build-config:
         - build-api: 'api-service'
           if: ${{github.event.inputs.build-api == 'true' }}
-          path: "prova1"
+          docker_repo_name: "mng_api"
+          path: "../management_api/api_service"
         - build-event: 'event-service'
           if: ${{github.event.inputs.build-event == 'true' }}
-          path: "prova2"
+          path: "../management_core/event_service"
+          docker_repo_name: "mng_event"
         - build-user: 'user-service'
           if: ${{github.event.inputs.build-user == 'true' }}
-          path: "prova3"
+          path: "../management_core/user_service"
+          docker_repo_name: "mng_user"
         - build-inventory: 'inventory-service'
           if: ${{github.event.inputs.build-inventory == 'true' }}
-          path: "prova4"
+          path: "../management_core/inventory_service"
+          docker_repo_name: "mng_inventory"
     name: Build
     runs-on: ubuntu-latest
 
     steps:
     - name: Checkout
+      if: ${{ matrix.build-config.if }}
       uses: actions/checkout@v3
       with:
         path: source
@@ -57,17 +62,20 @@ jobs:
         fetch-depth: 0
 
     - name: Set up Maven Central Repository
+      if: ${{ matrix.build-config.if }}
       uses: actions/setup-java@v4
       with:
         java-version: '17'
         distribution: 'corretto'
 
     - name: Setup SSH
+      if: ${{ matrix.build-config.if }}
       uses: webfactory/ssh-agent@v0.7.0
       with:
         ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
     - name: Cloning Management Core and switching to ${{ env.BRANCH_NAME }}
+      if: ${{ matrix.build-config.if }}
       working-directory: source
       run: |
         cd ..
@@ -77,7 +85,7 @@ jobs:
         cd ../source
 
     - name: Cloning Management Api and switching to ${{ env.BRANCH_NAME }}
-      if: ${{ matrix.build-config.build-api }}
+      if: ${{ matrix.build-config.if }}
       working-directory: source
       run: |
         cd ..
@@ -86,23 +94,25 @@ jobs:
         git checkout ${{ env.BRANCH_NAME }}
 
     - name: Build core
+      if: ${{ matrix.build-config.if }}
       working-directory: source
       run: |
         cd ../management_core
         mvn clean install
 
     - name: Package
+      if: ${{ matrix.build-config.if }}
       working-directory: source
       run: |
         cd ${{ matrix.build-config.path }}
         mvn package
 
     - name: Docker Build && Push
-      if: ${{ matrix.build-config.build-api }}
+      if: ${{ matrix.build-config.if }}
       working-directory: source
       run: |
-        cd ../management_api/api_service
-        docker build -t giridhar96/mng_api:${{github.run_number}} . --platform=linux/arm64 --no-cache
+        cd ${{ matrix.build-config.path }}
+        docker build -t giridhar96/${{ matrix.build-config.docker_repo_name }}:${{github.run_number}} . --platform=linux/arm64 --no-cache
 
 #    - name: Docker Build and push
 #      if: ${{github.event.inputs.build-api == 'true' }}
