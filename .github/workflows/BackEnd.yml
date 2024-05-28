@@ -45,6 +45,7 @@ jobs:
       uses: actions/setup-java@v4
       with:
         java-version: '17'
+        distribution: 'corretto'
 
     - name: Setup SSH
       uses: webfactory/ssh-agent@v0.7.0
