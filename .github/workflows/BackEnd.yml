@@ -108,6 +108,13 @@ jobs:
         cd ${{ matrix.build-config.path }}
         mvn package
 
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: docker.io
+        username: giridhar96
+        password: ${{ secrets.DOCKER_TOKEN }}
+
     - name: Docker Build && Push
       if: ${{ matrix.build-config.if }}
       working-directory: source
