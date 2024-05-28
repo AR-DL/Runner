@@ -7,7 +7,7 @@ on:
         description: Which env?
         options:
         - qa
-        - master
+        - main
       build-api:
         type: boolean
         description: api-service
@@ -26,7 +26,7 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 env:
-  BRANCH_NAME: ${{github.event.inputs.name}}
+  BRANCH_NAME: ${{github.event.inputs.env}}
 
 jobs:
   build:
@@ -50,84 +50,17 @@ jobs:
       working-directory: source
       run: |
         cd ..
-        git clone git@github.com:PiDMXOrg/PiDMX.git
-        cd PiDMX
+        git clone git@github.com:AR-DL/management_core.git
+        cd management_core
         git checkout ${{ env.BRANCH_NAME }}
         cd ../source
 
-    - name: Cloning PiDMX Common and switching to ${{ env.BRANCH_NAME }}
+    - name: Cloning Management Api and switching to ${{ env.BRANCH_NAME }}
+      if: ${{github.event.inputs.build-api == 'true' }}
       working-directory: source
       run: |
         cd ..
-        git clone git@github.com:PiDMXOrg/PiDMX_Common.git
-        cd PiDMX_Common
+        git clone git@github.com:AR-DL/management_api.git
+        cd management_api
         git checkout ${{ env.BRANCH_NAME }}
         cd ../source
-
-    - name: Downloading KDabDockWIdgets 2.0
-      working-directory: source
-      run: |
-        cd ..
-        curl -LO https://github.com/KDAB/KDDockWidgets/releases/download/v2.0.0/kddockwidgets-2.0.0.zip
-        dir
-        7z x kddockwidgets-2.0.0.zip
-        cd kddockwidgets-2.0.0
-        cd ../source
-
-    - name: Building KDabDockWIdgets 2.0
-      working-directory: source
-      run: |
-        cd ../kddockwidgets-2.0.0
-        mkdir build
-        cd build
-        cmake -G Ninja -DCMAKE_PREFIX_PATH=%Qt6_DIR% -DKDDockWidgets_QTQUICK=ON -DCMAKE_INSTALL_PREFIX="./../../KDDockWidgets_out" -DKDDockWidgets_QT6=ON -DCMAKE_BUILD_TYPE=Release -DKDDockWidgets_DEVELOPER_MODE=OFF -DKDDockWidgets_EXAMPLES=OFF ../
-        cmake --build .
-        cmake --build . --target install
-        cd ../../source
-      env:
-        CC: gcc
-        CXX: g++
-
-    - name: Build (Release)
-      working-directory: source
-      run: |
-        cd ../PiDMX
-        cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DCMAKE_PREFIX_PATH=%Qt6_DIR% -S . -B "./build" -G "MinGW Makefiles"
-        cmake --build ./build
-      env:
-        CC: gcc
-        CXX: g++
-
-    - name: Deploying
-      working-directory: source
-      run: |
-        mkdir ../PiDMX/build/deploy
-        cp -r ../PiDMX/Resources/Windows/installer/* ../PiDMX/build/deploy
-        cd ../PiDMX/build
-        mkdir ./deploy/packages/net.pidmx.pidmx/data
-        cp -r ./FixtureLibrary ./deploy/packages/net.pidmx.pidmx/data
-        cp -r ./Translations ./deploy/packages/net.pidmx.pidmx/data
-        mv ./PiDMX.exe ./deploy/packages/net.pidmx.pidmx/data/PiDMX.exe
-        mv ./src/libPiDMXLib.dll ./deploy/packages/net.pidmx.pidmx/data/libPiDMXLib.dll
-        mv ./../../KDDockWidgets_out/bin/libkddockwidgets-qt62.dll ./deploy/packages/net.pidmx.pidmx/data/libkddockwidgets-qt62.dll
-        mv ./src/Qt-Secret/src/libQt-Secret.dll ./deploy/packages/net.pidmx.pidmx/data/libQt-Secret.dll
-        mv ./src/Qt-Secret/src/mini-gmp/src/libQtBigint.dll ./deploy/packages/net.pidmx.pidmx/data/libQtBigint.dll
-        cd deploy
-        windeployqt ./packages/net.pidmx.pidmx/data/PiDMX.exe --qmldir ./../../src/QML/Views --compiler-runtime
-        windeployqt ./packages/net.pidmx.pidmx/data/libPiDMXLib.dll --qmldir ./../../src/QML/Views --compiler-runtime
-        windeployqt ./packages/net.pidmx.pidmx/data/libkddockwidgets-qt62.dll --qmldir ./../../src/QML/Views --compiler-runtime
-        windeployqt ./packages/net.pidmx.pidmx/data/libQt-Secret.dll --qmldir ./../../src/QML/Views --compiler-runtime
-
-    - name: Creating Installer
-      working-directory: source
-      run: |
-        cd ../PiDMX/build/deploy
-        ls ${{ env.IQTA_TOOLS }}/QtInstallerFramework
-        ${{ env.IQTA_TOOLS }}/QtInstallerFramework/4.7/bin/binarycreator -c config\config.xml -p packages PiDMX.exe
-
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v2.1.4
-      with:
-        name: pidmx-windows
-        path: |
-          D:/a/Runner/Runner/PiDMX/build/deploy/PiDMX.exe
