@@ -63,4 +63,15 @@ jobs:
         git clone git@github.com:AR-DL/management_api.git
         cd management_api
         git checkout ${{ env.BRANCH_NAME }}
-        cd ../source
+
+    - name: Build core
+      working-directory: source
+      run: |
+        cd ../management_core
+        mvn clean install
+
+    - name: Build
+      working-directory: source
+      run: |
+        cd ../management_api/api_service
+        mvn package
