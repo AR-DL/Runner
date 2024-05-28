@@ -85,7 +85,7 @@ jobs:
         cd ../source
 
     - name: Cloning Management Api and switching to ${{ env.BRANCH_NAME }}
-      if: ${{ matrix.build-config.if }}
+      if: ${{ ${{ matrix.build-config.if }} && ${{ matrix.build-config.build-api }}}}
       working-directory: source
       run: |
         cd ..
