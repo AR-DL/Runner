@@ -124,8 +124,8 @@ jobs:
         docker push giridhar96/${{ matrix.build-config.docker_repo_name }}:${{env.BUILD_NUMBER}}
 
     - name: Deploy to kubernetes
-      uses: actions-hub/kubectl@master
       working-directory: source
+      uses: actions-hub/kubectl@master
       env:
         KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
       with:
