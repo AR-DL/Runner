@@ -33,10 +33,14 @@ jobs:
     strategy:
       matrix:
         build-config:
-        - foo: 'bar'
+        - build-api: 'api-service'
           if: ${{github.event.inputs.build-api == 'true' }}
-        - foo: 'baz'
-          if: ${{github.event.inputs.build-api == 'true' }}
+        - build-event: 'event-service'
+          if: ${{github.event.inputs.build-event == 'true' }}
+        - build-user: 'user-service'
+          if: ${{github.event.inputs.build-user == 'true' }}
+        - build-inventory: 'inventory-service'
+          if: ${{github.event.inputs.build-inventory == 'true' }}
     name: Build
     runs-on: ubuntu-latest
 
@@ -69,7 +73,7 @@ jobs:
         cd ../source
 
     - name: Cloning Management Api and switching to ${{ env.BRANCH_NAME }}
-      if: ${{github.event.inputs.build-api == 'true' }}
+      if: ${{ matrix.build-config == build-api }}
       working-directory: source
       run: |
         cd ..
@@ -83,8 +87,14 @@ jobs:
         cd ../management_core
         mvn clean install
 
+    - name: Build core
+      working-directory: source
+      run: |
+        cd ../management_core
+        mvn clean install
+
     - name: Package api
-      if: ${{github.event.inputs.build-api == 'true' }}
+      if: ${{ matrix.build-config == build-api }}
       working-directory: source
       run: |
         cd ../management_api/api_service
