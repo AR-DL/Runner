@@ -124,12 +124,11 @@ jobs:
         docker push giridhar96/${{ matrix.build-config.docker_repo_name }}:${{env.BUILD_NUMBER}}
 
     - name: Deploy to kubernetes
-      working-directory: source
       uses: actions-hub/kubectl@master
       env:
         KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
       with:
-        args: apply -f ${{ matrix.build-config.path }}/kubernetes/prod.yaml
+        args: apply -f source/../${{ matrix.build-config.path }}/kubernetes/prod.yaml
 
 #    - name: Docker Build and push
 #      if: ${{github.event.inputs.build-api == 'true' }}
