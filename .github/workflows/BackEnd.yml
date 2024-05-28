@@ -126,8 +126,8 @@ jobs:
       working-directory: source
       run: |
         cd ${{ matrix.build-config.path }}
-        docker build -t giridhar96/${{ matrix.build-config.docker_repo_name }}:${{env.BUILD_NUMBER}} . --platform=linux/arm64 --no-cache
-        docker push giridhar96/${{ matrix.build-config.docker_repo_name }}:${{env.BUILD_NUMBER}}
+        docker build -t giridhar96/${{ matrix.build-config.docker_repo_name }}:latest . --platform=linux/arm64 --no-cache
+        docker push giridhar96/${{ matrix.build-config.docker_repo_name }}:latest
 
     - name: Deploy to kubernetes
       if: ${{ matrix.build-config.if }}
