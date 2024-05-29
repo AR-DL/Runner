@@ -7,7 +7,7 @@ on:
         description: Which env?
         options:
         - qa
-        - main
+        - prod
       build-api:
         type: boolean
         description: api-service
@@ -24,9 +24,6 @@ on:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
-
-env:
-  BRANCH_NAME: ${{github.event.inputs.env}}
 
 jobs:
   build:
@@ -61,11 +58,10 @@ jobs:
         submodules: recursive
         fetch-depth: 0
 
-    - name: Where i am
-      if: ${{ matrix.build-config.if }}
+    - name: Set ENV variables qa
+      if: ${{ matrix.build-config.if && (github.event.inputs.env == 'qa')}}
       run: |
-        pwd
-        ls
+        echo "BRANCH_NAME=$(qa)" >> $GITHUB_ENV
 
     - name: Set up Maven Central Repository
       if: ${{ matrix.build-config.if }}
