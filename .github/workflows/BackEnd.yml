@@ -126,8 +126,15 @@ jobs:
       working-directory: source
       run: |
         cd ${{ matrix.build-config.path }}
-        docker build -t giridhar96/${{ matrix.build-config.docker_repo_name }}:latest . --platform=linux/arm64 --no-cache
-        docker push giridhar96/${{ matrix.build-config.docker_repo_name }}:latest
+        docker build -t giridhar96/${{ matrix.build-config.docker_repo_name }}:${{env.BUILD_NUMBER}} . --platform=linux/arm64 --no-cache
+        docker push giridhar96/${{ matrix.build-config.docker_repo_name }}:${{env.BUILD_NUMBER}}
+
+    - name: Replace single file
+      uses: richardrigutins/replace-in-files@v2
+      with:
+        files: './source/${{ matrix.build-config.path }}/kubernetes/prod.yaml'
+        search-text: '{BUILD_NUMBER}'
+        replacement-text: ${{env.BUILD_NUMBER}}
 
     - name: Deploy to kubernetes
       if: ${{ matrix.build-config.if }}
