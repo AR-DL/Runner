@@ -27,12 +27,12 @@ jobs:
         fetch-depth: 0
 
     - name: Set ENV variables qa
-      if: ${{ matrix.build-config.if && (github.event.inputs.env == 'qa')}}
+      if: ${{github.event.inputs.env == 'qa'}}
       run: |
         echo "BRANCH_NAME=qa" >> $GITHUB_ENV
 
     - name: Set ENV variables prod
-      if: ${{ matrix.build-config.if && (github.event.inputs.env == 'prod')}}
+      if: ${{github.event.inputs.env == 'prod'}}
       run: |
         echo "BRANCH_NAME=main" >> $GITHUB_ENV
 
