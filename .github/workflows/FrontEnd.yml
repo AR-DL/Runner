@@ -57,13 +57,22 @@ jobs:
         username: giridhar96
         password: ${{ secrets.DOCKER_TOKEN }}
 
-    - name: Docker Build && Push
-      working-directory: source
-      run: |
-        cd ../ManagementApp
-        docker builder prune
-        docker build -t giridhar96/mng_api:${{env.BUILD_NUMBER}} . --platform=linux/arm64 --no-cache
-        docker push giridhar96/mng_api:${{env.BUILD_NUMBER}}
+    - name: Build on ubuntu-22.04 armv7
+      uses: uraimo/run-on-arch-action@v2
+      with:
+        arch: armv8
+        distro: ubuntu22.04
+        run: |
+          cd ./ManagementApp
+          docker build -t giridhar96/mng_api:${{env.BUILD_NUMBER}} . --platform=linux/arm64 --no-cache
+          docker push giridhar96/mng_api:${{env.BUILD_NUMBER}}
+
+        #    - name: Docker Build && Push
+        #      working-directory: source
+        #      run: |
+        #        cd ../ManagementApp
+        #        docker build -t giridhar96/mng_api:${{env.BUILD_NUMBER}} . --platform=linux/arm64 --no-cache
+        #        docker push giridhar96/mng_api:${{env.BUILD_NUMBER}}
 
     - name: Replace single file
       uses: richardrigutins/replace-in-files@v2
