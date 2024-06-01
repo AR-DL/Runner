@@ -64,7 +64,7 @@ jobs:
         distro: ubuntu22.04
         run: |
           cd ./ManagementApp
-          docker build -t giridhar96/mng_api:${{env.BUILD_NUMBER}} . --platform=linux/arm64 --no-cache
+          docker build -t giridhar96/mng_api:${{env.BUILD_NUMBER}} . --platform=linux/amd64 --no-cache
           docker push giridhar96/mng_api:${{env.BUILD_NUMBER}}
 
         #    - name: Docker Build && Push
