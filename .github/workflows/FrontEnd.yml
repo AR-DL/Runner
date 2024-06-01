@@ -60,7 +60,7 @@ jobs:
     - name: Build on ubuntu-22.04 armv7
       uses: uraimo/run-on-arch-action@v2
       with:
-        arch: armv8
+        arch: armv7
         distro: ubuntu22.04
         run: |
           cd ./ManagementApp
