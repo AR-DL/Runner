@@ -67,7 +67,7 @@ jobs:
       working-directory: source
       run: |
         cd ../ManagementApp
-        docker buildx -t giridhar96/mng_api:${{env.BUILD_NUMBER}} . --platform=linux/arm64 --no-cache
+        docker buildx build -t giridhar96/mng_api:${{env.BUILD_NUMBER}} . --platform=linux/arm64 --no-cache
         docker push giridhar96/mng_api:${{env.BUILD_NUMBER}}
 
     - name: Replace single file
