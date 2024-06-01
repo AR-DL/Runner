@@ -1,254 +1,84 @@
-name: PiDMX Mobile
-on: workflow_dispatch
+name: BackEnd - Micros - K8s
+on:
+  workflow_dispatch:
+    inputs:
+      env:
+        type: choice
+        description: Which env?
+        options:
+        - qa
+        - prod
 
 concurrency:
-    group: ${{ github.workflow }}-${{ github.ref }}
-    cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
-
-env:
-    QT_VERSION: 6.5.3
-    BRANCH_NAME: main
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
-    buildIos:
-        name: Build PiDMX Mobile (iOS)
-        runs-on: macos-latest
+  build:
+    name: Build
+    runs-on: ubuntu-latest
 
-        steps:
-            - name: Checkout
-              uses: actions/checkout@v3
-              with:
-                  path: source
-                  submodules: recursive
-                  fetch-depth: 0
+    steps:
+    - name: Checkout
+      if: ${{ matrix.build-config.if }}
+      uses: actions/checkout@v3
+      with:
+        path: source
+        submodules: recursive
+        fetch-depth: 0
 
-            - name: Setup Xcode
-              uses: maxim-lobanov/setup-xcode@v1
-              with:
-                  xcode-version: latest-stable
+    - name: Set ENV variables qa
+      if: ${{ matrix.build-config.if && (github.event.inputs.env == 'qa')}}
+      run: |
+        echo "BRANCH_NAME=qa" >> $GITHUB_ENV
 
-            - name: Download Qt (desktop)
-              id: qt-desktop
-              uses: jurplel/install-qt-action@v3
-              with:
-                  aqtversion: ==2.1.*
-                  version: ${{ env.QT_VERSION }}
-                  modules: qtnetworkauth
-                  set-env: false
+    - name: Set ENV variables prod
+      if: ${{ matrix.build-config.if && (github.event.inputs.env == 'prod')}}
+      run: |
+        echo "BRANCH_NAME=main" >> $GITHUB_ENV
 
-            - name: Download Qt (iOS)
-              id: qt-android-armv7
-              uses: jurplel/install-qt-action@v3
-              with:
-                  aqtversion: ==2.1.*
-                  version: ${{ env.QT_VERSION }}
-                  target: ios
-                  arch: ios
-                  modules: qtnetworkauth
+    - name: Setup SSH
+      if: ${{ matrix.build-config.if }}
+      uses: webfactory/ssh-agent@v0.7.0
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-            - name: Setup SSH
-              uses: MrSquaare/ssh-setup-action@v1
-              with:
-                  host: github.com
-                  private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+    - name: Cloning Management App and switching to ${{ env.BRANCH_NAME }}
+      if: ${{ matrix.build-config.if }}
+      working-directory: source
+      run: |
+        cd ..
+        git clone git@github.com:AR-DL/ManagementApp.git
+        cd ManagementApp
+        git checkout ${{ env.BRANCH_NAME }}
+        echo "BUILD_NUMBER=$(git rev-list --count HEAD)" >> $GITHUB_ENV
 
-            - name: Cloning PiDMX Common
-              working-directory: source
-              run: |
-                  cd ..
-                  git clone git@github.com:PiDMXOrg/PiDMX_Common.git
-                  cd PiDMX_Common
-                  git checkout ${{ env.BRANCH_NAME }}
-                  cd ../source
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: docker.io
+        username: giridhar96
+        password: ${{ secrets.DOCKER_TOKEN }}
 
-            - name: Cloning PiDMX Mobile
-              working-directory: source
-              run: |
-                  cd ..
-                  git clone git@github.com:PiDMXOrg/PiDMX_Mobile.git
-                  cd PiDMX_Mobile
-                  git checkout ${{ env.BRANCH_NAME }}
-                  cd ../source
+    - name: Docker Build && Push
+      if: ${{ matrix.build-config.if }}
+      working-directory: source
+      run: |
+        cd ../ManagementApp/management_app
+        docker build -t giridhar96/mng_api:${{env.BUILD_NUMBER}} . --platform=linux/arm64 --no-cache
+        docker push giridhar96/mng_api:${{env.BUILD_NUMBER}}
 
-            - name: Setup Fastlane
-              uses: ruby/setup-ruby@v1
-              with:
-                  bundler-cache: true
-                  working-directory: source/../PiDMX_Mobile
+    - name: Replace single file
+      uses: richardrigutins/replace-in-files@v2
+      with:
+        files: './ManagementApp/management_app/kubernetes/${{github.event.inputs.env}}.yaml'
+        search-text: '{BUILD_NUMBER}'
+        replacement-text: ${{env.BUILD_NUMBER}}
 
-            - name: Configure & prepare
-              working-directory: source/../PiDMX_Mobile
-              env:
-                  CONFIG_CMAKE: ${{ secrets.CONFIG_CMAKE }}
-                  GOOGLE_SERVICES_APPLE: ${{ secrets.GOOGLE_SERVICES_APPLE }}
-              run: |
-                  bundle exec fastlane ios prepare_qt6
-                  echo $CONFIG_CMAKE | base64 --decode > Config.cmake
-
-            - name: Build
-              working-directory: source/../PiDMX_Mobile
-              env:
-                  MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
-              run: |
-                  export FL_RUN_CMAKE_XCODE_PATH="${MD_APPLE_SDK_ROOT}"
-                  export QT_HOST_PATH="$(readlink -f "$Qt6_DIR/../macos")"
-                  bundle exec fastlane ios testbuild
-
-            - name: Upload artifacts
-              uses: actions/upload-artifact@v3
-              with:
-                  name: ios-package
-                  path: PiDMX_Mobile/fastlane/build/ios_qt6/PiDMX_Mobile.ipa
-
-    buildAndroid:
-        name: Build PiDMX Mobile (Android)
-        runs-on: ubuntu-22.04
-        strategy:
-            matrix:
-                type: [play]
-
-        steps:
-            - name: Checkout
-              uses: actions/checkout@v3
-              with:
-                  path: source
-                  submodules: recursive
-                  fetch-depth: 0
-
-            - name: Download Qt (desktop)
-              id: qt-desktop
-              uses: jurplel/install-qt-action@v3
-              with:
-                  aqtversion: ==2.1.*
-                  version: ${{ env.QT_VERSION }}
-                  modules: qtnetworkauth
-                  set-env: false
-
-            - name: Download Qt (Android, armv7)
-              id: qt-android-armv7
-              uses: jurplel/install-qt-action@v3
-              with:
-                  aqtversion: ==2.1.*
-                  version: ${{ env.QT_VERSION }}
-                  target: android
-                  arch: android_armv7
-                  modules: qtnetworkauth
-
-            - name: Download Qt (Android, arm64_v8a)
-              id: qt-android-arm64_v8a
-              uses: jurplel/install-qt-action@v3
-              with:
-                  aqtversion: ==2.1.*
-                  version: ${{ env.QT_VERSION }}
-                  target: android
-                  arch: android_arm64_v8a
-                  modules: qtnetworkauth
-
-            - name: Download Qt (Android, x86)
-              id: qt-android-x86
-              uses: jurplel/install-qt-action@v3
-              with:
-                  aqtversion: ==2.1.*
-                  version: ${{ env.QT_VERSION }}
-                  target: android
-                  arch: android_x86
-                  modules: qtnetworkauth
-
-            - name: Download Qt (Android, x86_64)
-              id: qt-android-x86_64
-              uses: jurplel/install-qt-action@v3
-              with:
-                  aqtversion: ==2.1.*
-                  version: ${{ env.QT_VERSION }}
-                  target: android
-                  arch: android_x86_64
-                  modules: qtnetworkauth
-
-            - name: Setup SSH
-              uses: MrSquaare/ssh-setup-action@v1
-              with:
-                  host: github.com
-                  private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-            - name: Cloning PiDMX Common
-              working-directory: source
-              run: |
-                  cd ..
-                  git clone git@github.com:PiDMXOrg/PiDMX_Common.git
-                  cd PiDMX_Common
-                  git checkout ${{ env.BRANCH_NAME }}
-                  cd ../source
-
-            - name: Cloning PiDMX Mobile
-              working-directory: source
-              run: |
-                  cd ..
-                  git clone git@github.com:PiDMXOrg/PiDMX_Mobile.git
-                  cd PiDMX_Mobile
-                  git checkout ${{ env.BRANCH_NAME }}
-                  cd ../source
-
-            - name: Setup Fastlane
-              uses: ruby/setup-ruby@v1
-              with:
-                  bundler-cache: true
-                  working-directory: source/../PiDMX_Mobile
-
-            - name: Set up OpenJDK 11
-              uses: actions/setup-java@v3
-              with:
-                  distribution: "adopt"
-                  java-version: "11"
-
-            - name: Setup ninja
-              uses: seanmiddleditch/gha-setup-ninja@v3
-
-            - name: Set up ccache
-              uses: hendrikmuhs/ccache-action@v1
-              with:
-                  key: Android_${{ matrix.type }}
-
-            - name: Configure & prepare
-              working-directory: source
-              env:
-                  CONFIG_CMAKE: ${{ secrets.CONFIG_CMAKE }}
-                  GOOGLE_DEPLOYMENT_KEY: ${{ secrets.GOOGLE_DEPLOYMENT_KEY }}
-                  GOOGLE_SERVICES_ANDROID: ${{ secrets.GOOGLE_SERVICES_ANDROID }}
-              run: |
-                  #echo $CONFIG_CMAKE | base64 --decode > Config.cmake
-                  #echo $GOOGLE_DEPLOYMENT_KEY | base64 --decode > google-play_api.json
-                  #echo $GOOGLE_SERVICES_ANDROID | base64 --decode > resources/Android/output/google-services.json
-
-            - name: Build
-              working-directory: source/../PiDMX_Mobile
-              env:
-                  BUILD_TYPE: ${{ matrix.type }}
-              run: |
-                  export QT_HOST_PATH="$(readlink -f "$Qt6_DIR/../gcc_64")"
-
-                  bundle exec fastlane android ${BUILD_TYPE}
-
-            - name: Sign app APK
-              uses: r0adkll/sign-android-release@v1
-              # ID used to access action output
-              id: sign_app
-              with:
-                  releaseDirectory: PiDMX_Mobile/fastlane/build/android_${{ matrix.type }}
-                  signingKeyBase64: ${{ secrets.ANDROID_SIGNING_KEY }}
-                  alias: ${{ secrets.ANDROID_KEY_ALIAS }}
-                  keyStorePassword: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-              env:
-                  # override default build-tools version (29.0.3) -- optional
-                  BUILD_TOOLS_VERSION: "33.0.0"
-
-            - name: Upload artifact
-              uses: actions/upload-artifact@v3
-              with:
-                  name: Android-package_${{ matrix.type }}
-                  path: PiDMX_Mobile/fastlane/build/android_${{ matrix.type }}/PiDMXMobile.*
-
-            - name: Deploy
-              working-directory: source/../PiDMX_Mobile
-              #        if: github.ref_name == 'deploy' && matrix.type == 'play'
-              run: |
-                  bundle exec fastlane android play_deploy
+    - name: Deploy to kubernetes
+      if: ${{ matrix.build-config.if }}
+      uses: actions-hub/kubectl@master
+      env:
+        KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
+      with:
+        args: apply -f ./ManagementApp/management_app/kubernetes/${{github.event.inputs.env}}.yaml
