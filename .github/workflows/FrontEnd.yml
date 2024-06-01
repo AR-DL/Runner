@@ -1,4 +1,4 @@
-name: BackEnd - Micros - K8s
+name: FrontEnd - Flutter
 on:
   workflow_dispatch:
     inputs:
