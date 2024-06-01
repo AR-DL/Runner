@@ -20,7 +20,6 @@ jobs:
 
     steps:
     - name: Checkout
-      if: ${{ matrix.build-config.if }}
       uses: actions/checkout@v3
       with:
         path: source
@@ -28,23 +27,19 @@ jobs:
         fetch-depth: 0
 
     - name: Set ENV variables qa
-      if: ${{ matrix.build-config.if && (github.event.inputs.env == 'qa')}}
       run: |
         echo "BRANCH_NAME=qa" >> $GITHUB_ENV
 
     - name: Set ENV variables prod
-      if: ${{ matrix.build-config.if && (github.event.inputs.env == 'prod')}}
       run: |
         echo "BRANCH_NAME=main" >> $GITHUB_ENV
 
     - name: Setup SSH
-      if: ${{ matrix.build-config.if }}
       uses: webfactory/ssh-agent@v0.7.0
       with:
         ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
     - name: Cloning Management App and switching to ${{ env.BRANCH_NAME }}
-      if: ${{ matrix.build-config.if }}
       working-directory: source
       run: |
         cd ..
@@ -61,7 +56,6 @@ jobs:
         password: ${{ secrets.DOCKER_TOKEN }}
 
     - name: Docker Build && Push
-      if: ${{ matrix.build-config.if }}
       working-directory: source
       run: |
         cd ../ManagementApp/management_app
@@ -76,7 +70,6 @@ jobs:
         replacement-text: ${{env.BUILD_NUMBER}}
 
     - name: Deploy to kubernetes
-      if: ${{ matrix.build-config.if }}
       uses: actions-hub/kubectl@master
       env:
         KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
