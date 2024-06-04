@@ -125,8 +125,8 @@ jobs:
       working-directory: source
       run: |
         cd ${{ matrix.build-config.path }}
-        docker build -t giridhar96/${{ matrix.build-config.docker_repo_name }}_${{github.event.inputs.env}} . --platform=linux/arm64 --no-cache
-        docker push giridhar96/${{ matrix.build-config.docker_repo_name }}_${{github.event.inputs.env}}
+        docker build -t ${{ secrets.DOCKERHUB_REGISTRY }}/${{ matrix.build-config.docker_repo_name }}_${{github.event.inputs.env}} . --platform=linux/arm64 --no-cache
+        docker push ${{ secrets.DOCKERHUB_REGISTRY }}/${{ matrix.build-config.docker_repo_name }}_${{github.event.inputs.env}}
 
     - name: Deploy to kubernetes
       if: ${{ matrix.build-config.if }}
