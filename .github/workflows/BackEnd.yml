@@ -89,7 +89,6 @@ jobs:
         git clone git@github.com:AR-DL/management_core.git
         cd management_core
         git checkout ${{ env.BRANCH_NAME }}
-        echo "BUILD_NUMBER=$(git rev-list --count HEAD)" >> $GITHUB_ENV
 
     - name: Cloning Management Api and switching to ${{ env.BRANCH_NAME }}
       if: ${{ (matrix.build-config.if) && (matrix.build-config.build-api) }}
@@ -99,7 +98,6 @@ jobs:
         git clone git@github.com:AR-DL/management_api.git
         cd management_api
         git checkout ${{ env.BRANCH_NAME }}
-        echo "BUILD_NUMBER=$(git rev-list --count HEAD)" >> $GITHUB_ENV
 
     - name: Build core
       if: ${{ matrix.build-config.if }}
@@ -127,15 +125,8 @@ jobs:
       working-directory: source
       run: |
         cd ${{ matrix.build-config.path }}
-        docker build -t giridhar96/${{ matrix.build-config.docker_repo_name }}:${{env.BUILD_NUMBER}} . --platform=linux/arm64 --no-cache
-        docker push giridhar96/${{ matrix.build-config.docker_repo_name }}:${{env.BUILD_NUMBER}}
-
-    - name: Replace single file
-      uses: richardrigutins/replace-in-files@v2
-      with:
-        files: './source/${{ matrix.build-config.path }}/kubernetes/${{github.event.inputs.env}}.yaml'
-        search-text: '{BUILD_NUMBER}'
-        replacement-text: ${{env.BUILD_NUMBER}}
+        docker build -t giridhar96/${{ matrix.build-config.docker_repo_name }}_${{github.event.inputs.env}} . --platform=linux/arm64 --no-cache
+        docker push giridhar96/${{ matrix.build-config.docker_repo_name }}_${{github.event.inputs.env}}
 
     - name: Deploy to kubernetes
       if: ${{ matrix.build-config.if }}
