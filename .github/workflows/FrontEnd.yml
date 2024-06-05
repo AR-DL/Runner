@@ -76,7 +76,6 @@ jobs:
         args: apply -f ./ManagementApp/kubernetes/${{github.event.inputs.env}}.yaml
 
     - name: Restart deployment
-      if: ${{ matrix.build-config.if }}
       uses: actions-hub/kubectl@master
       env:
         KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
