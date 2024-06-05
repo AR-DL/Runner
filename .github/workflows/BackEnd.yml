@@ -33,19 +33,23 @@ jobs:
         - build-api: 'api-service'
           if: ${{github.event.inputs.build-api == 'true' }}
           docker_repo_name: "mng_api"
+          deployment_name: "mng-api"
           path: "../management_api/api_service"
         - build-event: 'event-service'
           if: ${{github.event.inputs.build-event == 'true' }}
           path: "../management_core/event_service"
           docker_repo_name: "mng_event"
+          deployment_name: "mng-event"
         - build-user: 'user-service'
           if: ${{github.event.inputs.build-user == 'true' }}
           path: "../management_core/user_service"
           docker_repo_name: "mng_user"
+          deployment_name: "mng-user"
         - build-inventory: 'inventory-service'
           if: ${{github.event.inputs.build-inventory == 'true' }}
           path: "../management_core/inventory_service"
           docker_repo_name: "mng_inventory"
+          deployment_name: "mng-inventory"
     name: Build
     runs-on: ubuntu-latest
 
@@ -149,4 +153,4 @@ jobs:
       env:
         KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
       with:
-        args: rollout restart deployment/${{ matrix.build-config.docker_repo_name }}
+        args: rollout restart deployment/${{ matrix.build-config.deployment_name }} -n mng-${{github.event.inputs.env}}

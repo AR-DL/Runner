@@ -81,4 +81,4 @@ jobs:
       env:
         KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
       with:
-        args: rollout restart deployment/mng_front
+        args: rollout restart deployment/mng-front -n mng-${{github.event.inputs.env}}
