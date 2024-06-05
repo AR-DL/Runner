@@ -132,7 +132,7 @@ jobs:
       if: ${{ matrix.build-config.if }}
       working-directory: source
       run: |
-        cd ../ManagementApp
+        cd ${{ matrix.build-config.path }}
         docker buildx build -t lrservice.ns0.it/${{ matrix.build-config.docker_repo_name }}_${{github.event.inputs.env}} --platform=linux/arm64 --no-cache --push .
 
     - name: Deploy to kubernetes
