@@ -11,15 +11,18 @@ on:
       build-api:
         type: boolean
         description: api-service
+      build-billing:
+        type: boolean
+        description: billing-service
       build-event:
         type: boolean
         description: event-service
-      build-user:
-        type: boolean
-        description: user-service
       build-inventory:
         type: boolean
         description: inventory-service
+      build-user:
+        type: boolean
+        description: user-service
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -50,6 +53,11 @@ jobs:
           path: "../management_core/inventory_service"
           docker_repo_name: "mng_inventory"
           deployment_name: "mng-inventory"
+        - build-billing: 'billing-service'
+          if: ${{github.event.inputs.build-billing == 'true' }}
+          path: "../management_core/billing_service"
+          docker_repo_name: "mng_billing"
+          deployment_name: "mng-billing"
     name: Build
     runs-on: ubuntu-latest
 
@@ -120,7 +128,7 @@ jobs:
     - name: Login to Docker Container Registry
       uses: docker/login-action@v3
       with:
-        registry: lrservice.ns0.it
+        registry: app.left-rightsrls.it
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKER_TOKEN }}
 
@@ -137,7 +145,7 @@ jobs:
       working-directory: source
       run: |
         cd ${{ matrix.build-config.path }}
-        docker buildx build -t lrservice.ns0.it/${{ matrix.build-config.docker_repo_name }}_${{github.event.inputs.env}} --platform=linux/arm64 --no-cache --push .
+        docker buildx build -t app.left-rightsrls.it/${{ matrix.build-config.docker_repo_name }}_${{github.event.inputs.env}} --platform=linux/arm64 --no-cache --push .
 
     - name: Deploy to kubernetes
       if: ${{ matrix.build-config.if }}
