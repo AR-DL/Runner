@@ -52,7 +52,7 @@ jobs:
     - name: Login to Docker Container Registry
       uses: docker/login-action@v3
       with:
-        registry: lrservice.ns0.it
+        registry: app.left-rightsrls.it
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKER_TOKEN }}
 
@@ -66,7 +66,7 @@ jobs:
       working-directory: source
       run: |
         cd ../ManagementApp
-        docker buildx build -t lrservice.ns0.it/mng_front_${{github.event.inputs.env}} --platform=linux/arm64 --no-cache --push .
+        docker buildx build -t app.left-rightsrls.it/mng_front_${{github.event.inputs.env}} --platform=linux/arm64 --no-cache --push .
 
     - name: Deploy to kubernetes
       uses: actions-hub/kubectl@master
