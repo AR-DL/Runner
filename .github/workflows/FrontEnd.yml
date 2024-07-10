@@ -49,6 +49,13 @@ jobs:
         cd ManagementApp
         git checkout ${{ env.BRANCH_NAME }}
 
+    - name: Replace single file
+      uses: richardrigutins/replace-in-files@v2
+      with:
+        files: './ManagementApp/Dockerfile'
+        search-text: '{env}'
+        replacement-text: '${{github.event.inputs.env}}'
+
     - name: Login to Docker Container Registry
       uses: docker/login-action@v3
       with:
