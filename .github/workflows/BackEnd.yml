@@ -126,6 +126,7 @@ jobs:
         mvn package
 
     - name: Login to Docker Container Registry
+      if: ${{ matrix.build-config.if }}
       uses: docker/login-action@v3
       with:
         registry: app.left-rightsrls.it
