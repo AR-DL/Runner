@@ -102,6 +102,15 @@ jobs:
         cd management_core
         git checkout ${{ env.BRANCH_NAME }}
 
+    - name: Cloning Management Extension and switching to ${{ env.BRANCH_NAME }}
+      if: ${{ matrix.build-config.if }}
+      working-directory: source
+      run: |
+        cd ..
+        git clone git@github.com:AR-DL/management_extension.git
+        cd management_extension
+        git checkout ${{ env.BRANCH_NAME }}
+
     #- name: Cloning Management Api and switching to ${{ env.BRANCH_NAME }}
     #  if: ${{ (matrix.build-config.if) && (matrix.build-config.build-api) }}
     #  working-directory: source
