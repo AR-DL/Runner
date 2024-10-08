@@ -31,12 +31,14 @@ jobs:
       run: |
         echo "BRANCH_NAME=qa" >> $GITHUB_ENV
         echo "PORT=2999" >> $GITHUB_ENV
+        echo "SECRET_ENVIRONMENT=QA" >> $GITHUB_ENV
 
     - name: Set ENV variables prod
       if: ${{github.event.inputs.env == 'prod'}}
       run: |
         echo "BRANCH_NAME=main" >> $GITHUB_ENV
         echo "PORT=3049" >> $GITHUB_ENV
+        echo "SECRET_ENVIRONMENT=PROD" >> $GITHUB_ENV
 
     - name: Setup SSH
       uses: webfactory/ssh-agent@v0.7.0
@@ -54,11 +56,11 @@ jobs:
     - name: Create files from secrets
       working-directory: source
       run: |
-        echo "SECRET_ANDROID_KEY=MANAGEMENT_APP_GOOGLE_SERVICE_ANDROID_SECRET_${{ github.event.inputs.env }}" >> $GITHUB_ENV
-        echo "SECRET_IOS_KEY=MANAGEMENT_APP_GOOGLE_SERVICE_IOS_SECRET_${{ github.event.inputs.env }}" >> $GITHUB_ENV
-        echo "SECRET_MACOS_KEY=MANAGEMENT_APP_GOOGLE_SERVICE_MACOS_SECRET_${{ github.event.inputs.env }}" >> $GITHUB_ENV
-        echo "SECRET_WEB_KEY=MANAGEMENT_APP_GOOGLE_SERVICE_WEB_SECRET_${{ github.event.inputs.env }}" >> $GITHUB_ENV
-        echo "SECRET_FIREBASE_OPTIONS_KEY=MANAGEMENT_APP_GOOGLE_SERVICE_FIREBASE_OPTIONS_SECRET_${{ github.event.inputs.env }}" >> $GITHUB_ENV
+        echo "SECRET_ANDROID_KEY=MANAGEMENT_APP_GOOGLE_SERVICE_ANDROID_SECRET_${{ env.ENV_NAME }}" >> $GITHUB_ENV
+        echo "SECRET_IOS_KEY=MANAGEMENT_APP_GOOGLE_SERVICE_IOS_SECRET_${{ env.ENV_NAME }}" >> $GITHUB_ENV
+        echo "SECRET_MACOS_KEY=MANAGEMENT_APP_GOOGLE_SERVICE_MACOS_SECRET_${{ env.ENV_NAME }}" >> $GITHUB_ENV
+        echo "SECRET_WEB_KEY=MANAGEMENT_APP_GOOGLE_SERVICE_WEB_SECRET_${{ env.ENV_NAME }}" >> $GITHUB_ENV
+        echo "SECRET_FIREBASE_OPTIONS_KEY=MANAGEMENT_APP_GOOGLE_SERVICE_FIREBASE_OPTIONS_SECRET_${{ env.ENV_NAME }}" >> $GITHUB_ENV
         cd ../ManagementApp
         echo "${{ secrets[env.SECRET_ANDROID_KEY] }}" > ./android/app/google-services.json
         echo "${{ secrets[env.SECRET_IOS_KEY] }}" > ./ios/Runner/GoogleService-Info.plist
