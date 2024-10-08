@@ -51,6 +51,16 @@ jobs:
         cd ManagementApp
         git checkout ${{ env.BRANCH_NAME }}
 
+    - name: Create files from secrets
+      working-directory: source
+      run: |
+        cd ../ManagementApp
+        echo "${{ secrets.MANAGEMENT_APP_GOOGLE_SERVICE_ANDROID_SECRET_${{github.event.inputs.env}} }}" > ./android/app/google-services.json
+        echo "${{ secrets.MANAGEMENT_APP_GOOGLE_SERVICE_IOS_SECRET_${{github.event.inputs.env}} }}" > ./ios/Runner/GoogleService-Info.plist
+        echo "${{ secrets.MANAGEMENT_APP_GOOGLE_SERVICE_MACOS_SECRET_${{github.event.inputs.env}} }}" > ./macos/Runner/GoogleService-Info.plist
+        echo "${{ secrets.MANAGEMENT_APP_GOOGLE_SERVICE_WEB_SECRET_${{github.event.inputs.env}} }}" > ./web/firebase-messaging-sw.js
+        echo "${{ secrets.MANAGEMENT_APP_GOOGLE_SERVICE_FIREBASE_OPTIONS_SECRET_${{github.event.inputs.env}} }}" > ./lib/firebase_options_stg.dart
+
     - name: Replace single file
       uses: richardrigutins/replace-in-files@v2
       with:
