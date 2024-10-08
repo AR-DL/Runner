@@ -67,7 +67,7 @@ jobs:
         echo "${{ secrets[env.SECRET_MACOS_KEY] }}" > ./macos/Runner/GoogleService-Info.plist
         echo "${{ secrets[env.SECRET_WEB_KEY] }}" > ./web/firebase-messaging-sw.js
         echo "${{ secrets[env.SECRET_FIREBASE_OPTIONS_KEY] }}" > ./lib/firebase_options.dart
-        cat ${{ env.SECRET_FIREBASE_OPTIONS_KEY }}
+        echo ${{ env.SECRET_FIREBASE_OPTIONS_KEY }}
         ls ./lib/
         cat ./lib/firebase_options.dart
 
