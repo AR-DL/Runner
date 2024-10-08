@@ -66,7 +66,7 @@ jobs:
         echo "${{ secrets[env.SECRET_IOS_KEY] }}" > ./ios/Runner/GoogleService-Info.plist
         echo "${{ secrets[env.SECRET_MACOS_KEY] }}" > ./macos/Runner/GoogleService-Info.plist
         echo "${{ secrets[env.SECRET_WEB_KEY] }}" > ./web/firebase-messaging-sw.js
-        echo "${{ secrets[env.SECRET_FIREBASE_OPTIONS_KEY] }}" > ./lib/firebase_options_stg.dart
+        echo "${{ secrets[env.SECRET_FIREBASE_OPTIONS_KEY] }}" > ./lib/firebase_options.dart
 
     - name: Replace single file
       uses: richardrigutins/replace-in-files@v2
