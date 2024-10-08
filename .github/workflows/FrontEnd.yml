@@ -55,20 +55,12 @@ jobs:
       if: ${{github.event.inputs.env == 'qa'}}
       working-directory: source
       run: |
-        echo "SECRET_ANDROID_KEY=MANAGEMENT_APP_GOOGLE_SERVICE_ANDROID_SECRET_${{ env.SECRET_ENVIRONMENT }}" >> $GITHUB_ENV
-        echo "SECRET_IOS_KEY=MANAGEMENT_APP_GOOGLE_SERVICE_IOS_SECRET_${{ env.SECRET_ENVIRONMENT }}" >> $GITHUB_ENV
-        echo "SECRET_MACOS_KEY=MANAGEMENT_APP_GOOGLE_SERVICE_MACOS_SECRET_${{ env.SECRET_ENVIRONMENT }}" >> $GITHUB_ENV
-        echo "SECRET_WEB_KEY=MANAGEMENT_APP_GOOGLE_SERVICE_WEB_SECRET_${{ env.SECRET_ENVIRONMENT }}" >> $GITHUB_ENV
-        echo "SECRET_FIREBASE_OPTIONS_KEY=MANAGEMENT_APP_GOOGLE_SERVICE_FIREBASE_OPTIONS_SECRET_${{ env.SECRET_ENVIRONMENT }}" >> $GITHUB_ENV
         cd ../ManagementApp
         echo "${{ secrets.MANAGEMENT_APP_GOOGLE_SERVICE_ANDROID_SECRET_QA }}" > ./android/app/google-services.json
         echo "${{ secrets.MANAGEMENT_APP_GOOGLE_SERVICE_IOS_SECRET_QA }}" > ./ios/Runner/GoogleService-Info.plist
         echo "${{ secrets.MANAGEMENT_APP_GOOGLE_SERVICE_MACOS_SECRET_QA }}" > ./macos/Runner/GoogleService-Info.plist
         echo "${{ secrets.MANAGEMENT_APP_GOOGLE_SERVICE_WEB_SECRET_QA }}" > ./web/firebase-messaging-sw.js
         echo "${{ secrets.MANAGEMENT_APP_GOOGLE_SERVICE_FIREBASE_OPTIONS_SECRET_QA }}" > ./lib/firebase_options.dart
-        echo ${{ secrets.MANAGEMENT_APP_GOOGLE_SERVICE_FIREBASE_OPTIONS_SECRET_QA }}
-        ls ./lib/
-        cat ./lib/firebase_options.dart
 
     - name: Replace single file
       uses: richardrigutins/replace-in-files@v2
