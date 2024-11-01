@@ -23,8 +23,8 @@ jobs:
         build-config:
         - build-api: 'api-service'
           if: ${{github.event.inputs.build-api == 'true' }}
-          docker_repo_name: "store_api"
-          deployment_name: "store-api"
+          docker_repo_name: "bshop_api"
+          deployment_name: "bshop-api"
           path: "../bshop_core/api_service"
     name: Build
     runs-on: ubuntu-latest
@@ -130,4 +130,4 @@ jobs:
       env:
         KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
       with:
-        args: rollout restart deployment/${{ matrix.build-config.deployment_name }} -n store-${{github.event.inputs.env}}
+        args: rollout restart deployment/${{ matrix.build-config.deployment_name }} -n bshop-${{github.event.inputs.env}}
