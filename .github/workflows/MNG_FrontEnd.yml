@@ -1,4 +1,4 @@
-name: FrontEnd - Flutter
+name: MNG_FrontEnd - Flutter
 on:
   workflow_dispatch:
     inputs:

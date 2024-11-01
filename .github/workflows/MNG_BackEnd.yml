@@ -1,0 +1,174 @@
+name: MNG_BackEnd - Micros - K8s
+on:
+  workflow_dispatch:
+    inputs:
+      env:
+        type: choice
+        description: Which env?
+        options:
+        - qa
+        - prod
+      build-api:
+        type: boolean
+        description: api-service
+      build-billing:
+        type: boolean
+        description: billing-service
+      build-event:
+        type: boolean
+        description: event-service
+      build-inventory:
+        type: boolean
+        description: inventory-service
+      build-user:
+        type: boolean
+        description: user-service
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        build-config:
+        - build-api: 'api-service'
+          if: ${{github.event.inputs.build-api == 'true' }}
+          docker_repo_name: "mng_api"
+          deployment_name: "mng-api"
+          path: "../management_core/api_service"
+        - build-event: 'event-service'
+          if: ${{github.event.inputs.build-event == 'true' }}
+          path: "../management_core/event_service"
+          docker_repo_name: "mng_event"
+          deployment_name: "mng-event"
+        - build-user: 'user-service'
+          if: ${{github.event.inputs.build-user == 'true' }}
+          path: "../management_core/user_service"
+          docker_repo_name: "mng_user"
+          deployment_name: "mng-user"
+        - build-inventory: 'inventory-service'
+          if: ${{github.event.inputs.build-inventory == 'true' }}
+          path: "../management_core/inventory_service"
+          docker_repo_name: "mng_inventory"
+          deployment_name: "mng-inventory"
+        - build-billing: 'billing-service'
+          if: ${{github.event.inputs.build-billing == 'true' }}
+          path: "../management_core/billing_service"
+          docker_repo_name: "mng_billing"
+          deployment_name: "mng-billing"
+    name: Build
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      if: ${{ matrix.build-config.if }}
+      uses: actions/checkout@v3
+      with:
+        path: source
+        submodules: recursive
+        fetch-depth: 0
+
+    - name: Set ENV variables qa
+      if: ${{ matrix.build-config.if && (github.event.inputs.env == 'qa')}}
+      run: |
+        echo "BRANCH_NAME=qa" >> $GITHUB_ENV
+
+    - name: Set ENV variables prod
+      if: ${{ matrix.build-config.if && (github.event.inputs.env == 'prod')}}
+      run: |
+        echo "BRANCH_NAME=main" >> $GITHUB_ENV
+
+    - name: Set up Maven Central Repository
+      if: ${{ matrix.build-config.if }}
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'corretto'
+
+    - name: Setup SSH
+      if: ${{ matrix.build-config.if }}
+      uses: webfactory/ssh-agent@v0.7.0
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+    - name: Cloning Management Core and switching to ${{ env.BRANCH_NAME }}
+      if: ${{ matrix.build-config.if }}
+      working-directory: source
+      run: |
+        cd ..
+        git clone git@github.com:AR-DL/management_core.git
+        cd management_core
+        git checkout ${{ env.BRANCH_NAME }}
+
+    - name: Cloning Management Extension and switching to ${{ env.BRANCH_NAME }}
+      if: ${{ matrix.build-config.if }}
+      working-directory: source
+      run: |
+        cd ..
+        git clone git@github.com:AR-DL/management_extension.git
+        cd management_extension
+        git checkout ${{ env.BRANCH_NAME }}
+
+    #- name: Cloning Management Api and switching to ${{ env.BRANCH_NAME }}
+    #  if: ${{ (matrix.build-config.if) && (matrix.build-config.build-api) }}
+    #  working-directory: source
+    #  run: |
+    #    cd ..
+    #    git clone git@github.com:AR-DL/management_api.git
+    #    cd management_api
+    #    git checkout ${{ env.BRANCH_NAME }}
+
+    - name: Build core
+      if: ${{ matrix.build-config.if }}
+      working-directory: source
+      run: |
+        cd ../management_core
+        mvn clean install
+
+    - name: Package
+      if: ${{ matrix.build-config.if }}
+      working-directory: source
+      run: |
+        cd ${{ matrix.build-config.path }}
+        mvn package
+
+    - name: Login to Docker Container Registry
+      if: ${{ matrix.build-config.if }}
+      uses: docker/login-action@v3
+      with:
+        registry: app.left-rightsrls.it
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKER_TOKEN }}
+
+    - name: Set up QEMU
+      if: ${{ matrix.build-config.if }}
+      uses: docker/setup-qemu-action@v3
+
+    - name: Set up Docker Buildx
+      if: ${{ matrix.build-config.if }}
+      uses: docker/setup-buildx-action@v3
+
+    - name: Docker Build && Push
+      if: ${{ matrix.build-config.if }}
+      working-directory: source
+      run: |
+        cd ${{ matrix.build-config.path }}
+        docker buildx build -t app.left-rightsrls.it/${{ matrix.build-config.docker_repo_name }}_${{github.event.inputs.env}} --platform=linux/arm64 --no-cache --push .
+
+    - name: Deploy to kubernetes
+      if: ${{ matrix.build-config.if }}
+      uses: actions-hub/kubectl@master
+      env:
+        KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
+      with:
+        args: apply -f ./source/${{ matrix.build-config.path }}/kubernetes/${{github.event.inputs.env}}.yaml
+
+    - name: Restart deployment
+      if: ${{ matrix.build-config.if }}
+      uses: actions-hub/kubectl@master
+      env:
+        KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
+      with:
+        args: rollout restart deployment/${{ matrix.build-config.deployment_name }} -n mng-${{github.event.inputs.env}}
