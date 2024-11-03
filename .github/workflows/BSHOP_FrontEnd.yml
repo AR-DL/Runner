@@ -30,13 +30,13 @@ jobs:
       if: ${{github.event.inputs.env == 'qa'}}
       run: |
         echo "BRANCH_NAME=qa" >> $GITHUB_ENV
-        echo "PORT=2999" >> $GITHUB_ENV
+        echo "PORT=4000" >> $GITHUB_ENV
 
     - name: Set ENV variables prod
       if: ${{github.event.inputs.env == 'prod'}}
       run: |
         echo "BRANCH_NAME=main" >> $GITHUB_ENV
-        echo "PORT=3049" >> $GITHUB_ENV
+        echo "PORT=4050" >> $GITHUB_ENV
 
     - name: Setup SSH
       uses: webfactory/ssh-agent@v0.7.0
