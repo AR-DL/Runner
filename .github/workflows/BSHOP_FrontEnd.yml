@@ -104,7 +104,7 @@ jobs:
       working-directory: source
       run: |
         cd ../bshop_front
-        docker buildx build -t app.left-rightsrls.it/store_front_${{github.event.inputs.env}} --platform=linux/arm64 --no-cache --push .
+        docker buildx build -t app.left-rightsrls.it/bshop_front_${{github.event.inputs.env}} --platform=linux/arm64 --no-cache --push .
 
     - name: Deploy to kubernetes
       uses: actions-hub/kubectl@master
@@ -118,4 +118,4 @@ jobs:
       env:
         KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
       with:
-        args: rollout restart deployment/store-front -n store-${{github.event.inputs.env}}
+        args: rollout restart deployment/bshop-front -n bshop-${{github.event.inputs.env}}
