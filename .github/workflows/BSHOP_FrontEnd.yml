@@ -111,7 +111,7 @@ jobs:
       env:
         KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
       with:
-        args: apply -f ./bshop_core/kubernetes/${{github.event.inputs.env}}.yaml
+        args: apply -f ./bshop_front/kubernetes/${{github.event.inputs.env}}.yaml
 
     - name: Restart deployment
       uses: actions-hub/kubectl@master
