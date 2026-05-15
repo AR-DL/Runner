@@ -1,0 +1,132 @@
+name: MNG_MobileShell - Flutter
+on:
+  workflow_dispatch:
+    inputs:
+      env:
+        type: choice
+        description: Which env?
+        options:
+          - qa
+          - prod
+      platform:
+        type: choice
+        description: Build target
+        options:
+          - android
+          - ios
+          - both
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  build:
+    name: Build mobile shell
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          path: source
+          submodules: recursive
+
+      - name: Set ENV variables qa
+        if: ${{ github.event.inputs.env == 'qa' }}
+        run: |
+          echo "WEB_APP_URL=https://161.97.106.245/qa/mng/?native_shell=1" >> $GITHUB_ENV
+          echo "ALLOWED_HOSTS=161.97.106.245,localhost,127.0.0.1" >> $GITHUB_ENV
+          echo "GOOGLE_SERVICES_SECRET=MANAGEMENT_APP_GOOGLE_SERVICE_ANDROID_SECRET_QA" >> $GITHUB_ENV
+          echo "GOOGLE_SERVICES_IOS_SECRET=MANAGEMENT_APP_GOOGLE_SERVICE_IOS_SECRET_QA" >> $GITHUB_ENV
+          echo "FIREBASE_OPTIONS_SECRET=MANAGEMENT_APP_GOOGLE_SERVICE_FIREBASE_OPTIONS_SECRET_QA" >> $GITHUB_ENV
+
+      - name: Set ENV variables prod
+        if: ${{ github.event.inputs.env == 'prod' }}
+        run: |
+          echo "WEB_APP_URL=https://161.97.106.245/prod/mng/?native_shell=1" >> $GITHUB_ENV
+          echo "ALLOWED_HOSTS=161.97.106.245" >> $GITHUB_ENV
+          echo "GOOGLE_SERVICES_SECRET=MANAGEMENT_APP_GOOGLE_SERVICE_ANDROID_SECRET_PROD" >> $GITHUB_ENV
+          echo "GOOGLE_SERVICES_IOS_SECRET=MANAGEMENT_APP_GOOGLE_SERVICE_IOS_SECRET_PROD" >> $GITHUB_ENV
+          echo "FIREBASE_OPTIONS_SECRET=MANAGEMENT_APP_GOOGLE_SERVICE_FIREBASE_OPTIONS_SECRET_PROD" >> $GITHUB_ENV
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        working-directory: source/mobile_shell
+        run: flutter pub get
+
+      - name: Create Firebase config files
+        working-directory: source/mobile_shell
+        run: |
+          echo "${{ secrets[env.GOOGLE_SERVICES_SECRET] }}" > android/app/google-services.json
+          echo "${{ secrets[env.GOOGLE_SERVICES_IOS_SECRET] }}" > ios/Runner/GoogleService-Info.plist
+
+      - name: Build Android APK
+        if: ${{ github.event.inputs.platform == 'android' || github.event.inputs.platform == 'both' }}
+        working-directory: source/mobile_shell
+        run: |
+          flutter build apk --release \
+            --dart-define=WEB_APP_URL=${{ env.WEB_APP_URL }} \
+            --dart-define=ALLOWED_HOSTS=${{ env.ALLOWED_HOSTS }} \
+            --dart-define=USE_FIREBASE_OPTIONS=true \
+            --dart-define=FIREBASE_API_KEY=${{ secrets.FIREBASE_API_KEY }} \
+            --dart-define=FIREBASE_APP_ID_ANDROID=${{ secrets.FIREBASE_APP_ID_ANDROID }} \
+            --dart-define=FIREBASE_MESSAGING_SENDER_ID=${{ secrets.FIREBASE_MESSAGING_SENDER_ID }} \
+            --dart-define=FIREBASE_PROJECT_ID=${{ secrets.FIREBASE_PROJECT_ID }} \
+            --dart-define=FIREBASE_STORAGE_BUCKET=${{ secrets.FIREBASE_STORAGE_BUCKET }}
+
+      - name: Build Android App Bundle
+        if: ${{ github.event.inputs.platform == 'android' || github.event.inputs.platform == 'both' }}
+        working-directory: source/mobile_shell
+        run: |
+          flutter build appbundle --release \
+            --dart-define=WEB_APP_URL=${{ env.WEB_APP_URL }} \
+            --dart-define=ALLOWED_HOSTS=${{ env.ALLOWED_HOSTS }} \
+            --dart-define=USE_FIREBASE_OPTIONS=true \
+            --dart-define=FIREBASE_API_KEY=${{ secrets.FIREBASE_API_KEY }} \
+            --dart-define=FIREBASE_APP_ID_ANDROID=${{ secrets.FIREBASE_APP_ID_ANDROID }} \
+            --dart-define=FIREBASE_MESSAGING_SENDER_ID=${{ secrets.FIREBASE_MESSAGING_SENDER_ID }} \
+            --dart-define=FIREBASE_PROJECT_ID=${{ secrets.FIREBASE_PROJECT_ID }} \
+            --dart-define=FIREBASE_STORAGE_BUCKET=${{ secrets.FIREBASE_STORAGE_BUCKET }}
+
+      - name: Upload Android artifacts
+        if: ${{ github.event.inputs.platform == 'android' || github.event.inputs.platform == 'both' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-shell-android-${{ github.event.inputs.env }}
+          path: |
+            source/mobile_shell/build/app/outputs/flutter-apk/app-release.apk
+            source/mobile_shell/build/app/outputs/bundle/release/app-release.aab
+
+      - name: Build iOS (no codesign)
+        if: ${{ github.event.inputs.platform == 'ios' || github.event.inputs.platform == 'both' }}
+        working-directory: source/mobile_shell
+        run: |
+          flutter build ios --release --no-codesign \
+            --dart-define=WEB_APP_URL=${{ env.WEB_APP_URL }} \
+            --dart-define=ALLOWED_HOSTS=${{ env.ALLOWED_HOSTS }} \
+            --dart-define=USE_FIREBASE_OPTIONS=true \
+            --dart-define=FIREBASE_API_KEY=${{ secrets.FIREBASE_API_KEY }} \
+            --dart-define=FIREBASE_APP_ID_IOS=${{ secrets.FIREBASE_APP_ID_IOS }} \
+            --dart-define=FIREBASE_MESSAGING_SENDER_ID=${{ secrets.FIREBASE_MESSAGING_SENDER_ID }} \
+            --dart-define=FIREBASE_PROJECT_ID=${{ secrets.FIREBASE_PROJECT_ID }} \
+            --dart-define=FIREBASE_STORAGE_BUCKET=${{ secrets.FIREBASE_STORAGE_BUCKET }} \
+            --dart-define=FIREBASE_IOS_BUNDLE_ID=${{ secrets.FIREBASE_IOS_BUNDLE_ID }}
+
+      - name: Upload iOS artifact
+        if: ${{ github.event.inputs.platform == 'ios' || github.event.inputs.platform == 'both' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-shell-ios-${{ github.event.inputs.env }}
+          path: source/mobile_shell/build/ios/iphoneos/Runner.app

@@ -9,6 +9,14 @@ on:
         - qa
         - prod
 
+env:
+  GHCR_REGISTRY: ghcr.io
+  GHCR_IMAGE_PREFIX: ghcr.io/ar-dl
+
+permissions:
+  contents: read
+  packages: write
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
@@ -87,12 +95,12 @@ jobs:
         search-text: '{env}'
         replacement-text: '${{github.event.inputs.env}}'
 
-    - name: Login to Docker Container Registry
+    - name: Login to GHCR
       uses: docker/login-action@v3
       with:
-        registry: app.left-rightsrls.it
-        username: ${{ secrets.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKER_TOKEN }}
+        registry: ${{ env.GHCR_REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ github.token }}
 
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v3
@@ -104,18 +112,18 @@ jobs:
       working-directory: source
       run: |
         cd ../ManagementApp
-        docker buildx build -t app.left-rightsrls.it/mng_front_${{github.event.inputs.env}} --platform=linux/arm64 --no-cache --push .
+        docker buildx build -t ${{ env.GHCR_IMAGE_PREFIX }}/mng_front_${{ github.event.inputs.env }}:latest --platform=linux/arm64 --no-cache --push .
 
     - name: Deploy to kubernetes
       uses: actions-hub/kubectl@master
       env:
-        KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
+        KUBE_CONFIG: ${{ github.event.inputs.env == 'prod' && secrets.KUBE_CONFIG_PROD || secrets.KUBE_CONFIG_QA }}
       with:
         args: apply -f ./ManagementApp/kubernetes/${{github.event.inputs.env}}.yaml
 
     - name: Restart deployment
       uses: actions-hub/kubectl@master
       env:
-        KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
+        KUBE_CONFIG: ${{ github.event.inputs.env == 'prod' && secrets.KUBE_CONFIG_PROD || secrets.KUBE_CONFIG_QA }}
       with:
         args: rollout restart deployment/mng-front -n mng-${{github.event.inputs.env}}
