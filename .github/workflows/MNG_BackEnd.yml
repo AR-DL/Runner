@@ -46,18 +46,6 @@ jobs:
             echo "branch_name=qa" >> "$GITHUB_OUTPUT"
           fi
 
-  build:
-    name: Build
-    needs: setup
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          path: source
-          submodules: recursive
-          fetch-depth: 0
-
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.9.0
         with:
@@ -69,7 +57,7 @@ jobs:
           cd ..
           git clone git@github.com:AR-DL/management_core.git
           cd management_core
-          git checkout "${{ needs.setup.outputs.branch_name }}"
+          git checkout "${{ steps.branch.outputs.branch_name }}"
 
       - name: Clone Management Extension
         working-directory: source
@@ -77,7 +65,34 @@ jobs:
           cd ..
           git clone git@github.com:AR-DL/management_extension.git
           cd management_extension
-          git checkout "${{ needs.setup.outputs.branch_name }}"
+          git checkout "${{ steps.branch.outputs.branch_name }}"
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '26'
+          distribution: temurin
+          cache: maven
+          cache-dependency-path: management_core/**/pom.xml
+
+      - name: Upload Maven workspace
+        uses: actions/upload-artifact@v4
+        with:
+          name: maven-workspace
+          path: |
+            management_core/
+            management_extension/
+          if-no-files-found: error
+
+  build:
+    name: Build
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Maven workspace
+        uses: actions/download-artifact@v4
+        with:
+          name: maven-workspace
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -88,15 +103,13 @@ jobs:
           cache-dependency-path: management_core/**/pom.xml
 
       - name: Build core
-        working-directory: source
         run: |
-          cd ../management_core
+          cd management_core
           mvn clean install
 
       - name: Package api-service
-        working-directory: source
         run: |
-          cd ../management_core/api_service
+          cd management_core/api_service
           mvn package
 
       - name: Upload api-service artifact
@@ -140,36 +153,33 @@ jobs:
     needs: [setup, docker]
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          path: source
-          submodules: recursive
-          fetch-depth: 0
-
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
       - name: Clone Management Core
-        working-directory: source
         run: |
-          cd ..
-          git clone git@github.com:AR-DL/management_core.git
+          git clone git@github.com:AR-DL/management_core.git management_core
           cd management_core
           git checkout "${{ needs.setup.outputs.branch_name }}"
 
-      - name: Deploy to kubernetes
-        uses: actions-hub/kubectl@master
+      - name: Configure kubeconfig
         env:
-          KUBE_CONFIG: ${{ github.event.inputs.env == 'prod' && secrets.KUBE_CONFIG_PROD || secrets.KUBE_CONFIG_QA }}
-        with:
-          args: apply -f ./management_core/api_service/kubernetes/${{ github.event.inputs.env }}.yaml
+          KUBE_CONFIG_B64: ${{ github.event.inputs.env == 'prod' && secrets.KUBE_CONFIG_PROD || secrets.KUBE_CONFIG_QA }}
+        run: |
+          mkdir -p ~/.kube
+          echo "$KUBE_CONFIG_B64" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+          kubectl config current-context
+
+      - name: Deploy to kubernetes
+        run: |
+          MANIFEST="management_core/api_service/kubernetes/${{ github.event.inputs.env }}.yaml"
+          test -f "$MANIFEST"
+          kubectl apply -f "$MANIFEST"
 
       - name: Restart deployment
-        uses: actions-hub/kubectl@master
-        env:
-          KUBE_CONFIG: ${{ github.event.inputs.env == 'prod' && secrets.KUBE_CONFIG_PROD || secrets.KUBE_CONFIG_QA }}
-        with:
-          args: rollout restart deployment/${{ env.DEPLOYMENT_NAME }} -n mng-${{ github.event.inputs.env }}
+        run: |
+          kubectl rollout restart deployment/${{ env.DEPLOYMENT_NAME }} \
+            -n mng-${{ github.event.inputs.env }}
