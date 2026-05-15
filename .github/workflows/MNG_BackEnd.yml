@@ -159,12 +159,28 @@ jobs:
       - name: Configure kubeconfig
         env:
           KUBE_CONFIG_B64: ${{ github.event.inputs.env == 'prod' && secrets.KUBE_CONFIG_PROD || secrets.KUBE_CONFIG_QA }}
+          KUBE_SECRET_NAME: ${{ github.event.inputs.env == 'prod' && 'KUBE_CONFIG_PROD' || 'KUBE_CONFIG_QA' }}
+          NAMESPACE: mng-${{ github.event.inputs.env }}
         run: |
+          set -euo pipefail
+          if [ -z "${KUBE_CONFIG_B64// }" ]; then
+            echo "::error::Secret ${KUBE_SECRET_NAME} vuoto. Configuralo nel repo Runner (Settings → Secrets)."
+            exit 1
+          fi
           mkdir -p ~/.kube
-          echo "$KUBE_CONFIG_B64" | base64 -d > ~/.kube/config
+          echo "$KUBE_CONFIG_B64" | tr -d '[:space:]' | base64 -d > ~/.kube/config
           chmod 600 ~/.kube/config
-          kubectl config current-context
-          kubectl auth can-i patch deployments -n mng-${{ github.event.inputs.env }}
+          if ! kubectl config current-context; then
+            echo "::error::Kubeconfig non valido dopo decode. In ${KUBE_SECRET_NAME} incolla solo la riga base64 (senza commenti #)."
+            exit 1
+          fi
+          if ! kubectl auth can-i patch deployments -n "$NAMESPACE" 2>&1; then
+            echo "::error::Token rifiutato dal cluster. Rigenera ${KUBE_SECRET_NAME}:"
+            echo "  kubectl apply -f Runner/scripts/github-actions-rbac.yaml"
+            echo "  TOKEN=\$(kubectl create token github-actions-${NAMESPACE} -n ${NAMESPACE} --duration=8760h)"
+            echo "  ./Runner/scripts/generate-kubeconfig-secret.sh ${NAMESPACE} \"\$TOKEN\" /path/to/admin.conf"
+            exit 1
+          fi
 
       - name: Deploy image
         env:

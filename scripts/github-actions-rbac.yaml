@@ -1,0 +1,82 @@
+# Applicare sul cluster (con kubeconfig admin):
+#   kubectl apply -f github-actions-rbac.yaml
+#
+# Poi generare il secret GitHub:
+#   TOKEN=$(kubectl create token github-actions-mng-qa -n mng-qa --duration=8760h)
+#   ./generate-kubeconfig-secret.sh mng-qa "$TOKEN" /path/to/admin.conf
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mng-qa
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: github-actions-mng-qa
+  namespace: mng-qa
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: github-actions-deploy
+  namespace: mng-qa
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: github-actions-deploy
+  namespace: mng-qa
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: github-actions-deploy
+subjects:
+  - kind: ServiceAccount
+    name: github-actions-mng-qa
+    namespace: mng-qa
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mng-prod
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: github-actions-mng-prod
+  namespace: mng-prod
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: github-actions-deploy
+  namespace: mng-prod
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: github-actions-deploy
+  namespace: mng-prod
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: github-actions-deploy
+subjects:
+  - kind: ServiceAccount
+    name: github-actions-mng-prod
+    namespace: mng-prod
