@@ -46,11 +46,6 @@ jobs:
             echo "branch_name=qa" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Setup SSH
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
   build:
     name: Build
     needs: setup
@@ -104,11 +99,27 @@ jobs:
           cd ../management_core/api_service
           mvn package
 
-      - name: Docker build & Push
-        working-directory: source
-        run: |
-          cd ../management_core/api_service
+      - name: Upload api-service artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-service-build
+          path: management_core/api_service/
+          if-no-files-found: error
 
+  docker:
+    name: Docker build & Push
+    needs: [setup, build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download api-service artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: api-service-build
+          path: api_service
+
+      - name: Docker build & Push
+        working-directory: api_service
+        run: |
           echo "${{ github.token }}" | docker login "${{ env.GHCR_REGISTRY }}" \
             -u "${{ github.actor }}" --password-stdin
 
@@ -126,7 +137,7 @@ jobs:
 
   deploy:
     name: Deploy
-    needs: [setup, build]
+    needs: [setup, docker]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
