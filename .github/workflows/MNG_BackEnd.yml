@@ -14,6 +14,7 @@ env:
   GHCR_IMAGE_PREFIX: ghcr.io/ar-dl
   DOCKER_REPO_NAME: mng_api
   DEPLOYMENT_NAME: mng-api
+  IMAGE_TAG: ${{ github.run_number }}
 
 permissions:
   contents: read
@@ -141,8 +142,10 @@ jobs:
           docker buildx create --name mng-builder --driver docker-container --use
           docker buildx inspect --bootstrap
 
+          IMAGE="${{ env.GHCR_IMAGE_PREFIX }}/${{ env.DOCKER_REPO_NAME }}_${{ github.event.inputs.env }}:${{ env.IMAGE_TAG }}"
+          echo "Pushing ${IMAGE}"
           docker buildx build \
-            -t "${{ env.GHCR_IMAGE_PREFIX }}/${{ env.DOCKER_REPO_NAME }}_${{ github.event.inputs.env }}:latest" \
+            -t "${IMAGE}" \
             --platform=linux/amd64 \
             --no-cache \
             --push \
@@ -161,11 +164,17 @@ jobs:
           echo "$KUBE_CONFIG_B64" | base64 -d > ~/.kube/config
           chmod 600 ~/.kube/config
           kubectl config current-context
+          kubectl auth can-i patch deployments -n mng-${{ github.event.inputs.env }}
 
-      - name: Restart deployment
+      - name: Deploy image
+        env:
+          IMAGE: ${{ env.GHCR_IMAGE_PREFIX }}/${{ env.DOCKER_REPO_NAME }}_${{ github.event.inputs.env }}:${{ env.IMAGE_TAG }}
+          NAMESPACE: mng-${{ github.event.inputs.env }}
         run: |
-          kubectl rollout restart deployment/${{ env.DEPLOYMENT_NAME }} \
-            -n mng-${{ github.event.inputs.env }}
+          echo "Deploying ${IMAGE} to ${NAMESPACE}"
+          kubectl set image deployment/${{ env.DEPLOYMENT_NAME }} \
+            mng-api="${IMAGE}" \
+            -n "${NAMESPACE}"
           kubectl rollout status deployment/${{ env.DEPLOYMENT_NAME }} \
-            -n mng-${{ github.event.inputs.env }} \
+            -n "${NAMESPACE}" \
             --timeout=300s
