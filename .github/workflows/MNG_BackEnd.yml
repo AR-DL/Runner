@@ -143,27 +143,16 @@ jobs:
 
           docker buildx build \
             -t "${{ env.GHCR_IMAGE_PREFIX }}/${{ env.DOCKER_REPO_NAME }}_${{ github.event.inputs.env }}:latest" \
-            --platform=linux/arm64 \
+            --platform=linux/amd64 \
             --no-cache \
             --push \
             .
 
   deploy:
     name: Deploy
-    needs: [setup, docker]
+    needs: [docker]
     runs-on: ubuntu-latest
     steps:
-      - name: Setup SSH
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-      - name: Clone Management Core
-        run: |
-          git clone git@github.com:AR-DL/management_core.git management_core
-          cd management_core
-          git checkout "${{ needs.setup.outputs.branch_name }}"
-
       - name: Configure kubeconfig
         env:
           KUBE_CONFIG_B64: ${{ github.event.inputs.env == 'prod' && secrets.KUBE_CONFIG_PROD || secrets.KUBE_CONFIG_QA }}
@@ -173,13 +162,10 @@ jobs:
           chmod 600 ~/.kube/config
           kubectl config current-context
 
-      - name: Deploy to kubernetes
-        run: |
-          MANIFEST="management_core/api_service/kubernetes/${{ github.event.inputs.env }}.yaml"
-          test -f "$MANIFEST"
-          kubectl apply -f "$MANIFEST"
-
       - name: Restart deployment
         run: |
           kubectl rollout restart deployment/${{ env.DEPLOYMENT_NAME }} \
             -n mng-${{ github.event.inputs.env }}
+          kubectl rollout status deployment/${{ env.DEPLOYMENT_NAME }} \
+            -n mng-${{ github.event.inputs.env }} \
+            --timeout=300s

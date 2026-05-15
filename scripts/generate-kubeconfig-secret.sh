@@ -4,38 +4,67 @@
 set -euo pipefail
 
 NS="${1:?namespace es. mng-qa}"
-TOKEN="${2:?token da: kubectl create token github-actions-${NS} -n ${NS}}"
-ADMIN_CONF="${3:-/Users/davidelavalle/Desktop/kubernetees/admin.conf}"
+TOKEN="${2:?token da: kubectl create token github-actions-${NS} -n ${NS} --duration=8760h}"
+ADMIN_CONF="${3:-${KUBECONFIG:-$HOME/.kube/config}}"
+
+if [ ! -f "$ADMIN_CONF" ]; then
+  echo "ERRORE: kubeconfig admin non trovato: $ADMIN_CONF" >&2
+  exit 1
+fi
+
+if [ -z "$TOKEN" ] || [ "${#TOKEN}" -lt 20 ]; then
+  echo "ERRORE: TOKEN non valido (troppo corto o vuoto)" >&2
+  exit 1
+fi
 
 SA="github-actions-${NS}"
-SERVER=$(grep 'server:' "$ADMIN_CONF" | awk '{print $2}')
-CA_DATA=$(grep 'certificate-authority-data:' "$ADMIN_CONF" | awk '{print $2}')
+SERVER=$(kubectl --kubeconfig="$ADMIN_CONF" config view --minify -o jsonpath='{.clusters[0].cluster.server}')
+CA_DATA=$(kubectl --kubeconfig="$ADMIN_CONF" config view --raw -o jsonpath='{.clusters[0].cluster.certificate-authority-data}')
+
+if [ -z "$SERVER" ]; then
+  echo "ERRORE: impossibile leggere server dal kubeconfig admin" >&2
+  exit 1
+fi
+
+if [ -z "$CA_DATA" ]; then
+  echo "ERRORE: certificate-authority-data mancante in $ADMIN_CONF" >&2
+  exit 1
+fi
 
 TMP=$(mktemp)
 trap 'rm -f "$TMP"' EXIT
 
+# IMPORTANTE: token va sotto "user:", non come sibling di "name:"
 cat >"$TMP" <<EOF
 apiVersion: v1
 kind: Config
 clusters:
-  - name: kubeadm
+  - name: cluster
     cluster:
       server: ${SERVER}
       certificate-authority-data: ${CA_DATA}
 contexts:
   - name: ${SA}@${NS}
     context:
-      cluster: kubeadm
+      cluster: cluster
       namespace: ${NS}
       user: ${SA}
 current-context: ${SA}@${NS}
 users:
   - name: ${SA}
-    token: ${TOKEN}
+    user:
+      token: ${TOKEN}
 EOF
 
+# Verifica locale (solo permessi nel namespace, non kube-system)
+export KUBECONFIG="$TMP"
+kubectl config current-context >/dev/null
+kubectl auth can-i get deployments -n "$NS" | grep -q '^yes$'
+kubectl auth can-i patch deployments -n "$NS" | grep -q '^yes$'
+
 ENV_SUFFIX=$(echo "${NS#mng-}" | tr '[:lower:]' '[:upper:]')
-echo "# Secret GitHub: KUBE_CONFIG_${ENV_SUFFIX}"
-echo "# Namespace: ${NS} | ServiceAccount: ${SA}"
+echo "# Secret GitHub: KUBE_CONFIG_${ENV_SUFFIX}" >&2
+echo "# Namespace: ${NS} | ServiceAccount: ${SA}" >&2
+echo "# Incolla SOLO la riga base64 qui sotto nel secret GitHub" >&2
 base64 <"$TMP" | tr -d '\n'
 echo
