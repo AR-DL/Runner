@@ -1,4 +1,4 @@
-name: MNG_BackEnd - Micros - K8s
+name: BusinessCRM_BackEnd - Micros - K8s
 on:
   workflow_dispatch:
     inputs:
@@ -12,8 +12,8 @@ on:
 env:
   GHCR_REGISTRY: ghcr.io
   GHCR_IMAGE_PREFIX: ghcr.io/ar-dl
-  DOCKER_REPO_NAME: mng_api
-  DEPLOYMENT_NAME: mng-api
+  DOCKER_REPO_NAME: business_api
+  DEPLOYMENT_NAME: business-api
   IMAGE_TAG: ${{ github.run_number }}
 
 permissions:
@@ -56,16 +56,16 @@ jobs:
         working-directory: source
         run: |
           cd ..
-          git clone git@github.com:AR-DL/management_core.git
-          cd management_core
+          git clone git@github.com:AR-DL/business_core.git
+          cd business_core
           git checkout "${{ steps.branch.outputs.branch_name }}"
 
       - name: Clone Management Extension
         working-directory: source
         run: |
           cd ..
-          git clone git@github.com:AR-DL/management_extension.git
-          cd management_extension
+          git clone git@github.com:AR-DL/business_extension.git
+          cd business_extension
           git checkout "${{ steps.branch.outputs.branch_name }}"
 
       - name: Set up Java
@@ -74,15 +74,15 @@ jobs:
           java-version: '26'
           distribution: temurin
           cache: maven
-          cache-dependency-path: management_core/**/pom.xml
+          cache-dependency-path: business_core/**/pom.xml
 
       - name: Upload Maven workspace
         uses: actions/upload-artifact@v4
         with:
           name: maven-workspace
           path: |
-            management_core/
-            management_extension/
+            business_core/
+            business_extension/
           if-no-files-found: error
 
   build:
@@ -101,23 +101,23 @@ jobs:
           java-version: '26'
           distribution: temurin
           cache: maven
-          cache-dependency-path: management_core/**/pom.xml
+          cache-dependency-path: business_core/**/pom.xml
 
       - name: Build core
         run: |
-          cd management_core
+          cd business_core
           mvn clean install
 
       - name: Package api-service
         run: |
-          cd management_core/api_service
+          cd business_core/api_service
           mvn package
 
       - name: Upload api-service artifact
         uses: actions/upload-artifact@v4
         with:
           name: api-service-build
-          path: management_core/api_service/
+          path: business_core/api_service/
           if-no-files-found: error
 
   docker:
@@ -138,8 +138,8 @@ jobs:
             -u "${{ github.actor }}" --password-stdin
 
           docker run --rm --privileged tonistiigi/binfmt:latest --install all
-          docker buildx rm mng-builder 2>/dev/null || true
-          docker buildx create --name mng-builder --driver docker-container --use
+          docker buildx rm business-builder 2>/dev/null || true
+          docker buildx create --name business-builder --driver docker-container --use
           docker buildx inspect --bootstrap
 
           IMAGE="${{ env.GHCR_IMAGE_PREFIX }}/${{ env.DOCKER_REPO_NAME }}_${{ github.event.inputs.env }}:${{ env.IMAGE_TAG }}"
@@ -160,7 +160,7 @@ jobs:
         env:
           KUBE_CONFIG_B64: ${{ github.event.inputs.env == 'prod' && secrets.KUBE_CONFIG_PROD || secrets.KUBE_CONFIG_QA }}
           KUBE_SECRET_NAME: ${{ github.event.inputs.env == 'prod' && 'KUBE_CONFIG_PROD' || 'KUBE_CONFIG_QA' }}
-          NAMESPACE: mng-${{ github.event.inputs.env }}
+          NAMESPACE: business-${{ github.event.inputs.env }}
         run: |
           set -euo pipefail
           if [ -z "${KUBE_CONFIG_B64// }" ]; then
@@ -185,11 +185,11 @@ jobs:
       - name: Deploy image
         env:
           IMAGE: ${{ env.GHCR_IMAGE_PREFIX }}/${{ env.DOCKER_REPO_NAME }}_${{ github.event.inputs.env }}:${{ env.IMAGE_TAG }}
-          NAMESPACE: mng-${{ github.event.inputs.env }}
+          NAMESPACE: business-${{ github.event.inputs.env }}
         run: |
           echo "Deploying ${IMAGE} to ${NAMESPACE}"
           kubectl set image deployment/${{ env.DEPLOYMENT_NAME }} \
-            mng-api="${IMAGE}" \
+            business-api="${IMAGE}" \
             -n "${NAMESPACE}"
           kubectl rollout status deployment/${{ env.DEPLOYMENT_NAME }} \
             -n "${NAMESPACE}" \

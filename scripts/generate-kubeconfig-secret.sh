@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Genera kubeconfig per GitHub Actions (secret KUBE_CONFIG_QA / KUBE_CONFIG_PROD).
-# Uso: ./generate-kubeconfig-secret.sh mng-qa <TOKEN> [admin.conf]
+# Uso: ./generate-kubeconfig-secret.sh business-qa <TOKEN> [admin.conf]
 set -euo pipefail
 
-NS="${1:?namespace es. mng-qa}"
+NS="${1:?namespace es. business-qa}"
 TOKEN="${2:?token da: kubectl create token github-actions-${NS} -n ${NS} --duration=8760h}"
 ADMIN_CONF="${3:-${KUBECONFIG:-$HOME/.kube/config}}"
 
@@ -62,7 +62,7 @@ kubectl config current-context >/dev/null
 kubectl auth can-i get deployments -n "$NS" | grep -q '^yes$'
 kubectl auth can-i patch deployments -n "$NS" | grep -q '^yes$'
 
-ENV_SUFFIX=$(echo "${NS#mng-}" | tr '[:lower:]' '[:upper:]')
+ENV_SUFFIX=$(echo "${NS#business-}" | tr '[:lower:]' '[:upper:]')
 echo "# Secret GitHub: KUBE_CONFIG_${ENV_SUFFIX}" >&2
 echo "# Namespace: ${NS} | ServiceAccount: ${SA}" >&2
 echo "# Incolla SOLO la riga base64 qui sotto nel secret GitHub" >&2

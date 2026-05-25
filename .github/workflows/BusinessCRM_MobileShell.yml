@@ -1,4 +1,4 @@
-name: MNG_MobileShell - Flutter
+name: BusinessCRM_MobileShell - Flutter
 on:
   workflow_dispatch:
     inputs:
@@ -35,7 +35,7 @@ jobs:
       - name: Set ENV variables qa
         if: ${{ github.event.inputs.env == 'qa' }}
         run: |
-          echo "WEB_APP_URL=https://161.97.106.245/qa/mng/?native_shell=1" >> $GITHUB_ENV
+          echo "WEB_APP_URL=https://161.97.106.245/qa/business/?native_shell=1" >> $GITHUB_ENV
           echo "ALLOWED_HOSTS=161.97.106.245,localhost,127.0.0.1" >> $GITHUB_ENV
           echo "GOOGLE_SERVICES_SECRET=MANAGEMENT_APP_GOOGLE_SERVICE_ANDROID_SECRET_QA" >> $GITHUB_ENV
           echo "GOOGLE_SERVICES_IOS_SECRET=MANAGEMENT_APP_GOOGLE_SERVICE_IOS_SECRET_QA" >> $GITHUB_ENV
@@ -44,7 +44,7 @@ jobs:
       - name: Set ENV variables prod
         if: ${{ github.event.inputs.env == 'prod' }}
         run: |
-          echo "WEB_APP_URL=https://161.97.106.245/prod/mng/?native_shell=1" >> $GITHUB_ENV
+          echo "WEB_APP_URL=https://161.97.106.245/prod/business/?native_shell=1" >> $GITHUB_ENV
           echo "ALLOWED_HOSTS=161.97.106.245" >> $GITHUB_ENV
           echo "GOOGLE_SERVICES_SECRET=MANAGEMENT_APP_GOOGLE_SERVICE_ANDROID_SECRET_PROD" >> $GITHUB_ENV
           echo "GOOGLE_SERVICES_IOS_SECRET=MANAGEMENT_APP_GOOGLE_SERVICE_IOS_SECRET_PROD" >> $GITHUB_ENV

@@ -2,25 +2,25 @@
 #   kubectl apply -f github-actions-rbac.yaml
 #
 # Poi generare il secret GitHub:
-#   TOKEN=$(kubectl create token github-actions-mng-qa -n mng-qa --duration=8760h)
-#   ./generate-kubeconfig-secret.sh mng-qa "$TOKEN" /path/to/admin.conf
+#   TOKEN=$(kubectl create token github-actions-business-qa -n business-qa --duration=8760h)
+#   ./generate-kubeconfig-secret.sh business-qa "$TOKEN" /path/to/admin.conf
 ---
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: mng-qa
+  name: business-qa
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: github-actions-mng-qa
-  namespace: mng-qa
+  name: github-actions-business-qa
+  namespace: business-qa
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: github-actions-deploy
-  namespace: mng-qa
+  namespace: business-qa
 rules:
   - apiGroups: ["apps"]
     resources: ["deployments"]
@@ -33,32 +33,32 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: github-actions-deploy
-  namespace: mng-qa
+  namespace: business-qa
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
   name: github-actions-deploy
 subjects:
   - kind: ServiceAccount
-    name: github-actions-mng-qa
-    namespace: mng-qa
+    name: github-actions-business-qa
+    namespace: business-qa
 ---
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: mng-prod
+  name: business-prod
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: github-actions-mng-prod
-  namespace: mng-prod
+  name: github-actions-business-prod
+  namespace: business-prod
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: github-actions-deploy
-  namespace: mng-prod
+  namespace: business-prod
 rules:
   - apiGroups: ["apps"]
     resources: ["deployments"]
@@ -71,12 +71,12 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: github-actions-deploy
-  namespace: mng-prod
+  namespace: business-prod
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
   name: github-actions-deploy
 subjects:
   - kind: ServiceAccount
-    name: github-actions-mng-prod
-    namespace: mng-prod
+    name: github-actions-business-prod
+    namespace: business-prod

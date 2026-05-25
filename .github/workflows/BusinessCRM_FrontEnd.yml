@@ -1,4 +1,4 @@
-name: MNG_FrontEnd - Flutter
+name: BusinessCRM_FrontEnd - Flutter
 on:
   workflow_dispatch:
     inputs:
@@ -12,8 +12,8 @@ on:
 env:
   GHCR_REGISTRY: ghcr.io
   GHCR_IMAGE_PREFIX: ghcr.io/ar-dl
-  DOCKER_REPO_NAME: mng_front
-  DEPLOYMENT_NAME: mng-front
+  DOCKER_REPO_NAME: business_front
+  DEPLOYMENT_NAME: business-front
   IMAGE_TAG: ${{ github.run_number }}
 
 permissions:
@@ -121,8 +121,8 @@ jobs:
             -u "${{ github.actor }}" --password-stdin
 
           docker run --rm --privileged tonistiigi/binfmt:latest --install all
-          docker buildx rm mng-front-builder 2>/dev/null || true
-          docker buildx create --name mng-front-builder --driver docker-container --use
+          docker buildx rm business-front-builder 2>/dev/null || true
+          docker buildx create --name business-front-builder --driver docker-container --use
           docker buildx inspect --bootstrap
 
           IMAGE="${{ env.GHCR_IMAGE_PREFIX }}/${{ env.DOCKER_REPO_NAME }}_${{ github.event.inputs.env }}:${{ env.IMAGE_TAG }}"
@@ -143,7 +143,7 @@ jobs:
         env:
           KUBE_CONFIG_B64: ${{ github.event.inputs.env == 'prod' && secrets.KUBE_CONFIG_PROD || secrets.KUBE_CONFIG_QA }}
           KUBE_SECRET_NAME: ${{ github.event.inputs.env == 'prod' && 'KUBE_CONFIG_PROD' || 'KUBE_CONFIG_QA' }}
-          NAMESPACE: mng-${{ github.event.inputs.env }}
+          NAMESPACE: business-${{ github.event.inputs.env }}
         run: |
           set -euo pipefail
           if [ -z "${KUBE_CONFIG_B64// }" ]; then
@@ -168,11 +168,11 @@ jobs:
       - name: Deploy image
         env:
           IMAGE: ${{ env.GHCR_IMAGE_PREFIX }}/${{ env.DOCKER_REPO_NAME }}_${{ github.event.inputs.env }}:${{ env.IMAGE_TAG }}
-          NAMESPACE: mng-${{ github.event.inputs.env }}
+          NAMESPACE: business-${{ github.event.inputs.env }}
         run: |
           echo "Deploying ${IMAGE} to ${NAMESPACE}"
           kubectl set image deployment/${{ env.DEPLOYMENT_NAME }} \
-            mng-front="${IMAGE}" \
+            business-front="${IMAGE}" \
             -n "${NAMESPACE}"
           kubectl rollout status deployment/${{ env.DEPLOYMENT_NAME }} \
             -n "${NAMESPACE}" \
